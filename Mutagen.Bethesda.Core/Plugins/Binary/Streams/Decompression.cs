@@ -1,5 +1,5 @@
 ﻿using System.Buffers.Binary;
-using Ionic.Zlib;
+using System.IO.Compression;
 using Mutagen.Bethesda.Plugins.Binary.Headers;
 using Mutagen.Bethesda.Plugins.Binary.Overlay;
 using Mutagen.Bethesda.Plugins.Meta;
@@ -13,10 +13,15 @@ public static class Decompression
     public static byte[] Decompress(ReadOnlyMemorySlice<byte> bytes, uint uncompressedLength)
     {
         byte[] buf = new byte[checked((int)uncompressedLength)];
-        using (var stream = new ZlibStream(new ByteMemorySliceStream(bytes),
+        
+        using (var stream = new DeflateStream(new ByteMemorySliceStream(bytes),
                    CompressionMode.Decompress))
         {
-            stream.Read(buf, 0, checked((int)uncompressedLength));
+            var readBytes = stream.Read(buf, 0, checked((int)uncompressedLength));
+            if (uncompressedLength != readBytes)
+            {
+                
+            }
         }
 
         return buf;
@@ -38,10 +43,14 @@ public static class Decompression
             BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan().Slice(meta.MajorConstants.FlagLocationOffset),
                 majorMeta.MajorRecordFlags & ~Constants.CompressedFlag);
             // Copy uncompressed data over
-            using (var stream = new ZlibStream(new ByteMemorySliceStream(slice.Slice(majorMeta.HeaderLength + 4)),
+            using (var stream = new DeflateStream(new ByteMemorySliceStream(slice.Slice(majorMeta.HeaderLength + 4)),
                        CompressionMode.Decompress))
             {
-                stream.Read(buf, majorMeta.HeaderLength, checked((int)uncompressedLength));
+                var readBytes = stream.Read(buf, majorMeta.HeaderLength, checked((int)uncompressedLength));
+                if (uncompressedLength != readBytes)
+                {
+                
+                }
             }
 
             slice = new MemorySlice<byte>(buf);
@@ -69,10 +78,14 @@ public static class Decompression
                 majorMeta.MajorRecordFlags & ~Constants.CompressedFlag);
             // Copy uncompressed data over
             using (var compessionStream =
-                   new ZlibStream(new ByteMemorySliceStream(stream.RemainingMemory.Slice(majorMeta.HeaderLength + 4)),
+                   new DeflateStream(new ByteMemorySliceStream(stream.RemainingMemory.Slice(majorMeta.HeaderLength + 4)),
                        CompressionMode.Decompress))
             {
-                compessionStream.Read(buf, majorMeta.HeaderLength, checked((int)uncompressedLength));
+                var readBytes = compessionStream.Read(buf, majorMeta.HeaderLength, checked((int)uncompressedLength));
+                if (uncompressedLength != readBytes)
+                {
+                
+                }
             }
 
             stream.Position += checked((int)majorMeta.TotalLength);
